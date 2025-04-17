@@ -1,10 +1,11 @@
-
 import React from 'react'
-import { IEvento } from '../../interfaces/IEvento';
 import style from './Calendario.module.scss';
 import ptBR from './localizacao/ptBR.json'
-import Kalend, { CalendarView } from 'kalend'
+import Kalend, { CalendarView, OnEventDragFinish } from 'kalend'
 import 'kalend/dist/styles/index.css';
+import { listaDeEventosState } from '../../interfaces/state/atom';
+import useAtualizarEvento from '../../hooks/useAtualizarEventos';
+import useListaDeEventos from '../../hooks/useListaDeEventos';
 
 interface IKalendEvento {
   id?: number
@@ -14,9 +15,11 @@ interface IKalendEvento {
   color: string
 }
 
-const Calendario: React.FC<{ eventos: IEvento[] }> = ({ eventos }) => {
+const Calendario: React.FC = () => {
 
-  const eventosKalend = new Map<string, IKalendEvento[]>();
+  const eventosKalend = new Map<string, IKalendEvento[]>()
+  const eventos = useListaDeEventos()
+  const atualizarEvento = useAtualizarEvento()
 
   eventos.forEach(evento => {
     const chave = evento.inicio.toISOString().slice(0, 10)
@@ -31,6 +34,20 @@ const Calendario: React.FC<{ eventos: IEvento[] }> = ({ eventos }) => {
       color: 'blue'
     })
   })
+
+  const onEventDragFinished: OnEventDragFinish = (prevEvent, updatedEvent) => {
+    const evento = eventos.find(evento => evento.id === prevEvent.id)
+    if (evento) {
+      const eventoAtualizado = {
+        ...evento,
+        inicio: new Date(updatedEvent.timezoneStartAt),
+        fim: new Date(updatedEvent.timezoneStartAt)
+      }
+
+      atualizarEvento(eventoAtualizado)
+    }
+  }
+
   return (
     <div className={style.Container}>
       <Kalend
@@ -43,6 +60,7 @@ const Calendario: React.FC<{ eventos: IEvento[] }> = ({ eventos }) => {
         calendarIDsHidden={['work']}
         language={'customLanguage'}
         customLanguage={ptBR}
+        onEventDragFinish={onEventDragFinished}
       />
     </div>
   );
